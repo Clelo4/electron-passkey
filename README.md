@@ -1,3 +1,5 @@
+fork from https://github.com/RyuGames/electron-passkey
+
 # electron-passkey
 
 Native module for electron applications to use passkey funcitonality in macOS apps.
@@ -21,7 +23,7 @@ navigator.credentials.get = (options) =>
 import { ipcMain } from 'electron';
 import Passkey from 'electron-passkey';
 
-Passkey.getInstance().attachHandlersToMain('domain.com', ipcMain);
+Passkey.getInstance().attachHandlersToMain(ipcMain);
 ```
 
 ### Entitlements Setup

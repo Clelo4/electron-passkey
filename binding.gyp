@@ -23,6 +23,10 @@
             ],
             "ldflags": ["-ObjC"]
           },
+          "cflags+": [
+            "-std=c++14",
+            "-fvisibility=hidden"
+          ],
           "xcode_settings": {
             "GCC_SYMBOLS_PRIVATE_EXTERN": "YES",
             "OTHER_CFLAGS": [
@@ -30,7 +34,9 @@
               "-fexceptions"
             ],
             "OTHER_CPLUSPLUSFLAGS": [
-              "-ObjC++"
+              "-std=c++14",
+              "-ObjC++",
+              "-fvisibility=hidden"
             ]
           }
         }],
@@ -46,16 +52,19 @@
         }]
       ],
       "cflags": [
-        "-std=c++11",
         "-pedantic",
         "-Wall",
         "-pthread",
         "-fexceptions"
       ],
-      "cflags+": ["-fvisibility=hidden"],
+      "cflags+": [
+        "-std=c++14",
+        "-fvisibility=hidden"
+      ],
       "cflags_cc": [
-        "-std=c++11",
-        "-fexceptions"
+        "-std=c++14",
+        "-fexceptions",
+        "-fvisibility=hidden"
       ]
     }
   ]
