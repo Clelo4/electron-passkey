@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import importPlugin from 'eslint-plugin-import';
 import { FlatCompat } from '@eslint/eslintrc';
+import globals from "globals";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,10 +16,9 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['**/build/', '**/dist/', '**/prebuilds/', '**/*.config.*'],
+    ignores: ['**/build/', '**/dist/', '**/prebuilds/', '**/*.config.*', "**/demo/"],
   },
   ...compat.extends(
-    'airbnb-base',
     'plugin:prettier/recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:import/recommended',
@@ -44,6 +44,8 @@ export default [
       globals: {
         navigator: 'readonly',
         window: 'readonly',
+        ...globals.browser,
+        ...globals.node,
       },
       ecmaVersion: 2020,
       sourceType: 'module',

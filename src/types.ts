@@ -32,7 +32,7 @@ interface CredentialDescriptor {
 
 export interface PublicKeyCredentialRequestOptions {
   rpId?: string;
-  challenge: Buffer;
+  challenge: ArrayBufferView | ArrayBuffer;
   allowCredentials?: Array<CredentialDescriptor>;
   userVerification?: 'required' | 'preferred' | 'discouraged';
   timeout?: number;

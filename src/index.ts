@@ -13,7 +13,6 @@ import { arrayBufferToBase64, mapPublicKey, PassKeyMethods } from './utils';
 const lib: PasskeyInterface = require('node-gyp-build')(join(__dirname, '..'));
 
 class Passkey {
-  // eslint-disable-next-line
   private static instance: Passkey;
 
   private handler: PasskeyHandler;
