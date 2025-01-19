@@ -1,25 +1,25 @@
 export interface PublicKeyCredentialCreationOptions {
-  rp: {
-    id: string;
-    name: string;
-  };
-  user: {
-    id: ArrayBuffer | string;
-    name: string;
-    displayName: string;
-  };
-  challenge: ArrayBuffer | string;
-  pubKeyCredParams: Array<{
-    type: string;
-    alg: number;
-  }>;
-  timeout?: number;
+  attestation?: 'none' | 'indirect' | 'direct' | 'enterprise';
   authenticatorSelection?: {
     authenticatorAttachment?: 'platform' | 'cross-platform';
     requireResidentKey?: boolean;
     userVerification?: 'required' | 'preferred' | 'discouraged';
   };
-  attestation?: 'none' | 'indirect' | 'direct' | 'enterprise';
+  rp: {
+    id: string;
+    name: string;
+  };
+  user: {
+    id: BufferSource;
+    name: string;
+    displayName: string;
+  };
+  challenge: BufferSource;
+  pubKeyCredParams: Array<{
+    type: string;
+    alg: number;
+  }>;
+  timeout?: number;
   extensions?: AuthenticationExtensionsClientInputs;
 }
 
@@ -48,8 +48,8 @@ export interface PasskeyOptions {
 }
 
 export interface PasskeyHandler {
-  HandlePasskeyCreate(options: string): Promise<string>;
-  HandlePasskeyGet(options: string): Promise<string>;
+  HandlePasskeyCreate(options: PublicKeyCredentialCreationOptions): Promise<string>;
+  HandlePasskeyGet(options: PublicKeyCredentialRequestOptions): Promise<string>;
 }
 
 export interface PasskeyInterface {

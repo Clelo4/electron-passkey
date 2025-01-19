@@ -1,7 +1,9 @@
 #ifndef PASSKEY_HANDLER_H_
 #define PASSKEY_HANDLER_H_
 
-#include <napi.h>
+#include "napi.h"
+#include "PublicKeyCredentialRequestOptions.h"
+#include "PublicKeyCredentialCreationOptions.h"
 #include <memory>  // Include for std::unique_ptr
 
 class PasskeyHandler : public Napi::ObjectWrap<PasskeyHandler> {
@@ -18,4 +20,7 @@ private:
     std::unique_ptr<Impl> impl_;  // Pointer to the implementation
 };
 
-#endif  // PASSKEY_HANDLER_H_
+extern PublicKeyCredentialCreationOptions ParseCreateOptions(const Napi::Object& jsOptions);
+extern PublicKeyCredentialRequestOptions ParseRequestOptions(const Napi::Object& jsOptions);
+
+#endif // PASSKEY_HANDLER_H_

@@ -1,0 +1,11 @@
+{
+  "clangd.fallbackFlags": [
+    "-I${workspaceFolder}/node_modules/node-addon-api",
+    "-I/Users/jack/.nvm/versions/node/v20.15.0/include/node"
+  ],
+  "files.associations": {
+      "*.cpp": "cpp",
+      "*.h": "cpp",
+      "*.hpp": "cpp"
+  }
+}

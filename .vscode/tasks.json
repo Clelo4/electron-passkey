@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Get Node Include Path",
+      "type": "shell",
+      "command": "node -p \"path.join(process.execPath, '..', 'include', 'node')\"",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": false,
+        "reveal": "never",
+        "panel": "shared"
+      },
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": [
+            "-c"
+          ]
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

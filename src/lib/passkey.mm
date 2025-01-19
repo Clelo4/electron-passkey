@@ -1,4 +1,11 @@
 #import "passkey.h"
+#include <stdexcept>
+#include <exception>
+#include "napi.h"
+#include "PublicKeyCredentialCreationOptions.h"
+#include "PublicKeyCredentialRequestOptions.h"
+#include "utils.h"
+#include <iostream>
 #import <Foundation/Foundation.h>
 #import <dispatch/dispatch.h>
 #import <AuthenticationServices/AuthenticationServices.h>
@@ -13,8 +20,8 @@ NSData* ConvertBufferToNSData(Napi::Buffer<uint8_t> buffer) {
 
 @property (nonatomic, strong) PasskeyCompletionHandler completionHandler;
 
-- (void)PerformCreateRequest:(NSDictionary *)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler;
-- (void)PerformGetRequest:(NSDictionary *)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler;
+- (void)PerformCreateRequest:(const PublicKeyCredentialCreationOptions &)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler;
+- (void)PerformGetRequest:(const PublicKeyCredentialRequestOptions&)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler;
 
 @end
 
@@ -25,28 +32,22 @@ NSData* ConvertBufferToNSData(Napi::Buffer<uint8_t> buffer) {
     return self;
 }
 
-- (void)PerformCreateRequest:(NSDictionary *)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler {
+- (void)PerformCreateRequest:(const PublicKeyCredentialCreationOptions &)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler {
     self.completionHandler = completionHandler;
 
     if (@available(macOS 12.0, *)) {
-        NSDictionary *publicKeyOptions = options[@"publicKey"];
-        NSString *rpId = publicKeyOptions[@"rp"][@"id"];
-        NSString *userName = publicKeyOptions[@"user"][@"name"];
-        
-        NSString *challengeString = publicKeyOptions[@"challenge"];
-        NSData *challenge = [[NSData alloc] initWithBase64EncodedString:challengeString options:0];
-
-        NSString *userIdString = publicKeyOptions[@"user"][@"id"];
-        NSData *userId = [[NSData alloc] initWithBase64EncodedString:userIdString options:0];
+      NSString *rpId = ToNSString(options.GetRp().id);
+      NSString *userName = ToNSString(options.GetUser().name);
+      NSData *userId = ToNSData(options.GetUser().id);
+      NSData *challenge = ToNSData(options.GetChallenge());
 
         ASAuthorizationPlatformPublicKeyCredentialProvider *provider =
             [[ASAuthorizationPlatformPublicKeyCredentialProvider alloc] initWithRelyingPartyIdentifier:rpId];
-
+    
         ASAuthorizationPlatformPublicKeyCredentialRegistrationRequest *request =
             [provider createCredentialRegistrationRequestWithChallenge:challenge name:userName userID:userId];
 
-        NSDictionary *authenticatorSelection = publicKeyOptions[@"authenticatorSelection"];
-        if (authenticatorSelection) {
+        if (options.HasAuthenticatorSelection()) {
             // NSString *attachment = authenticatorSelection[@"authenticatorAttachment"];
             // if ([attachment isEqualToString:@"platform"]) {
             //     request.authenticatorAttachment = ASAuthorizationPublicKeyCredentialAttachmentPlatform;
@@ -81,7 +82,7 @@ NSData* ConvertBufferToNSData(Napi::Buffer<uint8_t> buffer) {
     }
 }
 
-- (void)PerformGetRequest:(NSDictionary *)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler {
+- (void)PerformGetRequest:(const PublicKeyCredentialRequestOptions&)options withCompletionHandler:(PasskeyCompletionHandler)completionHandler {
     self.completionHandler = completionHandler;
 
     if (@available(macOS 12.0, *)) {
@@ -291,21 +292,10 @@ public:
         // ARC handles memory management, so no need to manually delete or release
     }
 
-    Napi::Value HandlePasskeyCreate(Napi::Env env, const std::string& options) {
-        if (options.empty()) {
-            Napi::TypeError::New(env, "[HandlePasskeyCreate]: Options string is empty").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-
-        NSDictionary* optionsDict = ConvertStringToNSDictionary(options);
-        if (optionsDict == nil) {
-            Napi::TypeError::New(env, "[HandlePasskeyCreate]: Failed to convert options to NSDictionary").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-
+    Napi::Value HandlePasskeyCreate(Napi::Env env, const PublicKeyCredentialCreationOptions& creationOptions) {
         auto deferred = Napi::Promise::Deferred::New(env);
 
-        [handlerObjC PerformCreateRequest:optionsDict withCompletionHandler:^(NSString *resultMessage, NSString *errorMessage) {
+        [handlerObjC PerformCreateRequest:creationOptions withCompletionHandler:^(NSString *resultMessage, NSString *errorMessage) {
             Napi::HandleScope scope(env);
 
             if (errorMessage != nil) {
@@ -320,21 +310,10 @@ public:
         return deferred.Promise();
     }
 
-    Napi::Value HandlePasskeyGet(Napi::Env env, const std::string& options) {
-        if (options.empty()) {
-            Napi::TypeError::New(env, "[HandlePasskeyGet]: Options string is empty").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-
-        NSDictionary* optionsDict = ConvertStringToNSDictionary(options);
-        if (optionsDict == nil) {
-            Napi::TypeError::New(env, "[HandlePasskeyGet]: Failed to convert options to NSDictionary").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-
+    Napi::Value HandlePasskeyGet(Napi::Env env, const PublicKeyCredentialRequestOptions& requestOptions) {
         auto deferred = Napi::Promise::Deferred::New(env);
 
-        [handlerObjC PerformGetRequest:optionsDict withCompletionHandler:^(NSString *resultMessage, NSString *errorMessage) {
+        [handlerObjC PerformGetRequest:requestOptions withCompletionHandler:^(NSString *resultMessage, NSString *errorMessage) {
             Napi::HandleScope scope(env);
 
             if (errorMessage != nil) {
@@ -360,14 +339,40 @@ PasskeyHandler::PasskeyHandler(const Napi::CallbackInfo& info)
 
 PasskeyHandler::~PasskeyHandler() = default;
 
-Napi::Value PasskeyHandler::HandlePasskeyCreate(const Napi::CallbackInfo& info) {
-    std::string options = info[0].As<Napi::String>();
-    return impl_->HandlePasskeyCreate(info.Env(), options);
+Napi::Value
+PasskeyHandler::HandlePasskeyCreate(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    try {
+      if (info.Length() < 1 || !info[0].IsObject()) {
+        throw std::invalid_argument("Expected object as first argument");
+      }
+
+      Napi::Object jsOptions = info[0].As<Napi::Object>();
+      PublicKeyCredentialCreationOptions createOptons = ParseCreateOptions(jsOptions);
+
+      return impl_->HandlePasskeyCreate(info.Env(), createOptons);
+    } catch (const std::exception &e) {
+      Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
 }
 
-Napi::Value PasskeyHandler::HandlePasskeyGet(const Napi::CallbackInfo& info) {
-    std::string options = info[0].As<Napi::String>();
-    return impl_->HandlePasskeyGet(info.Env(), options);
+Napi::Value PasskeyHandler::HandlePasskeyGet(const Napi::CallbackInfo &info) {
+  Napi::Env env = info.Env();
+
+  try {
+    if (info.Length() < 1 || !info[0].IsObject()) {
+      throw std::invalid_argument("Expected object as first argument");
+    }
+
+    Napi::Object jsOptions = info[0].As<Napi::Object>();
+    PublicKeyCredentialRequestOptions requestOptions = ParseRequestOptions(jsOptions);
+
+    return impl_->HandlePasskeyGet(info.Env(), requestOptions);
+  } catch (const std::exception &e) {
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
 }
 
 Napi::Object PasskeyHandler::Init(Napi::Env env, Napi::Object exports) {
